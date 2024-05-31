@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comanda Medicament</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">Pacient</h1>
+    <div class="list-group">
+        <div class="list-group-item">
+            <p><strong>Nume:</strong> {{ pacient.nume }}</p>
+            <p><strong>Salon:</strong> {{ pacient.salon }}</p>
+            <p><strong>Pat:</strong> {{ pacient.pat }}</p>
+        </div>
+    </div>
+
+    <div class="container mt-5">
+        <h1 class="mb-4">Istoric Comenzi</h1>
+        <ul class="list-group">
+            {% for comanda in comenzi %}
+                <li class="list-group-item">
+                    <p><strong>Medicament:</strong> {{ comanda.medicament }}</p>
+                    <p><strong>Status:</strong> {{ comanda.status }}</p>
+                    <p><strong>Diagnostic:</strong> {{ comanda.diagnostic }}</p>
+                    <p><strong>Data:</strong> {{comanda.formatted_datetime  }}</p>
+                <div>
+                    <form action="{{ url_for('deletecomandaadmin', id=comanda.id) }}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </div>
+                </li>
+
+            {% endfor %}
+        </ul>
+    </div>
+
+    <a href="{{ url_for('indexadmin') }}" class="btn btn-secondary mt-3">Back to Pacienti List</a>
+</div>
+
+<!-- Bootstrap JS and dependencies -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

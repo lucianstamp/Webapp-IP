@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "default": "pharmalinker",
+    "pharmalinker": "pharmalinker"
+  },
+  "targets": {},
+  "etags": {},
+  "dataconnectEmulatorConfig": {}
+}

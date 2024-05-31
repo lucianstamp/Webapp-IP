@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Corridor Map</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        #map {
+            position: relative;
+            width: 1000px;
+            height: 800px;
+            background-color: #ffffff;
+            border: 1px solid #ccc;
+            margin-top: 20px;
+        }
+        .checkpoint {
+            width: 50px;
+            height: 50px;
+            background-color: #007bff;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 5px;
+            position: absolute;
+            cursor: pointer;
+        }
+        .checkpoint.selected {
+            border: 2px solid yellow;
+        }
+        .robot {
+            width: 20px;
+            height: 20px;
+            background-color: #ff0000;
+            border-radius: 50%;
+            position: absolute;
+            top: 15px;
+            left: 15px;
+        }
+        .control-panel {
+            margin-top: 20px;
+        }
+        .control-panel button {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Modificare harta spital</h1>
+        <div class="list-group">
+            <div class="list-group-item">
+                {% for rblc in robotlocation %}
+                    <p><strong>Last location:</strong> {{ rblc.last }}</p>
+                    <p><strong>Next location:</strong> {{ rblc.next }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        <a href="{{ url_for('indexadmin') }}" class="btn btn-secondary mt-3">Back to Pacienti List</a>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="control-panel">
+        <button id="addCheckpoint" class="btn btn-primary">Add Checkpoint</button>
+        <button id="removeCheckpoint" class="btn btn-danger">Remove Checkpoint</button>
+        <button id="saveChanges" class="btn btn-success">Save Changes</button>
+    </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        let selectedCheckpoint = null;
+        let checkpoints = [];
+
+        async function fetchCheckpoints() {
+            try {
+                const response = await fetch('/get_checkpoints');
+                const data = await response.json();
+                console.log('Fetched checkpoints:', data);
+                return data;
+            } catch (error) {
+                console.error('Error fetching checkpoints:', error);
+                return [];
+            }
+        }
+
+        function calculatePositions(checkpoints) {
+            let positions = {};
+            let stack = [{id: '1', x: 500, y: 400}]; // Starting position
+
+            while (stack.length > 0) {
+                const current = stack.pop();
+                if (!positions[current.id]) {
+                    positions[current.id] = {x: current.x, y: current.y};
+
+                    const checkpoint = checkpoints.find(cp => cp.id === current.id);
+                    if (checkpoint) {
+                        if (checkpoint.front_id !== "0" && !positions[checkpoint.front_id]) {
+                            stack.push({id: checkpoint.front_id, x: current.x, y: current.y - 75});
+                        }
+                        if (checkpoint.back_id !== "0" && !positions[checkpoint.back_id]) {
+                            stack.push({id: checkpoint.back_id, x: current.x, y: current.y + 75});
+                        }
+                        if (checkpoint.left_id !== "0" && !positions[checkpoint.left_id]) {
+                            stack.push({id: checkpoint.left_id, x: current.x - 75, y: current.y});
+                        }
+                        if (checkpoint.right_id !== "0" && !positions[checkpoint.right_id]) {
+                            stack.push({id: checkpoint.right_id, x: current.x + 75, y: current.y});
+                        }
+                    }
+                }
+            }
+
+            console.log('Calculated positions:', positions);
+            return positions;
+        }
+
+        function createCheckpointElement(id, x, y) {
+            const checkpointDiv = document.createElement('div');
+            checkpointDiv.className = 'checkpoint';
+            checkpointDiv.id = `checkpoint-${id}`;
+            checkpointDiv.innerText = id;
+            checkpointDiv.style.left = `${x}px`;
+            checkpointDiv.style.top = `${y}px`;
+            checkpointDiv.draggable = true;
+
+            checkpointDiv.addEventListener('dragstart', (event) => {
+                selectedCheckpoint = checkpointDiv;
+            });
+
+            checkpointDiv.addEventListener('dragend', (event) => {
+                const rect = document.getElementById('map').getBoundingClientRect();
+                checkpointDiv.style.left = `${event.clientX - rect.left - 25}px`;
+                checkpointDiv.style.top = `${event.clientY - rect.top - 25}px`;
+                updateCheckpointConnections();
+            });
+
+            checkpointDiv.addEventListener('click', () => {
+                if (selectedCheckpoint) {
+                    selectedCheckpoint.classList.remove('selected');
+                }
+                selectedCheckpoint = checkpointDiv;
+                checkpointDiv.classList.add('selected');
+            });
+
+            return checkpointDiv;
+        }
+
+        function updateCheckpointConnections() {
+            const mapRect = document.getElementById('map').getBoundingClientRect();
+            checkpoints.forEach(cp => {
+                const cpElement = document.getElementById(`checkpoint-${cp.id}`);
+                const cpRect = cpElement.getBoundingClientRect();
+                cp.x = cpRect.left - mapRect.left;
+                cp.y = cpRect.top - mapRect.top;
+
+                cp.front_id = "0";
+                cp.back_id = "0";
+                cp.left_id = "0";
+                cp.right_id = "0";
+
+                checkpoints.forEach(otherCp => {
+                    if (cp.id !== otherCp.id) {
+                        const otherCpElement = document.getElementById(`checkpoint-${otherCp.id}`);
+                        const otherCpRect = otherCpElement.getBoundingClientRect();
+                        const dx = otherCpRect.left - cpRect.left;
+                        const dy = otherCpRect.top - cpRect.top;
+
+                        if (Math.abs(dx) < 10 && dy < 0 && Math.abs(dy) < 100) {
+                            cp.front_id = otherCp.id;
+                        } else if (Math.abs(dx) < 10 && dy > 0 && Math.abs(dy) < 100) {
+                            cp.back_id = otherCp.id;
+                        } else if (dx < 0 && Math.abs(dy) < 10 && Math.abs(dx) < 100) {
+                            cp.left_id = otherCp.id;
+                        } else if (dx > 0 && Math.abs(dy) < 10 && Math.abs(dx) < 100) {
+                            cp.right_id = otherCp.id;
+                        }
+                    }
+                });
+            });
+
+            console.log('Updated checkpoint connections:', checkpoints);
+        }
+
+        function renderMap(checkpoints) {
+            const mapDiv = document.getElementById('map');
+            mapDiv.innerHTML = '';
+            const positions = calculatePositions(checkpoints);
+
+            checkpoints.forEach((checkpoint, index) => {
+                const pos = positions[checkpoint.id] || {x: checkpoint.x, y: checkpoint.y};
+                console.log(`Rendering checkpoint ${checkpoint.id} at position`, pos);
+                const checkpointElement = createCheckpointElement(
+                    checkpoint.id,
+                    pos.x,
+                    pos.y
+                );
+                mapDiv.appendChild(checkpointElement);
+            });
+
+            updateCheckpointConnections();
+        }
+
+        document.getElementById('addCheckpoint').addEventListener('click', () => {
+            const newId = (checkpoints.length + 1).toString();
+            const newCheckpoint = {
+                id: newId,
+                front_id: "0",
+                back_id: "0",
+                left_id: "0",
+                right_id: "0",
+                x: 100,
+                y: 100
+            };
+            checkpoints.push(newCheckpoint);
+            renderMap(checkpoints);
+        });
+
+        document.getElementById('removeCheckpoint').addEventListener('click', async () => {
+            if (selectedCheckpoint) {
+                const id = selectedCheckpoint.id.replace('checkpoint-', '');
+                try {
+                    const response = await fetch(`/delete_checkpoint/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        checkpoints = checkpoints.filter(cp => cp.id !== id);
+                        renderMap(checkpoints);
+                        selectedCheckpoint = null;
+                        updateCheckpointConnections();
+                    } else {
+                        console.error('Failed to delete checkpoint:', response.statusText);
+                        alert('Failed to delete checkpoint. Please try again.');
+                    }
+                } catch (error) {
+                    console.error('Error deleting checkpoint:', error);
+                    alert('Error deleting checkpoint. Please try again.');
+                }
+            }
+        });
+
+        document.getElementById('saveChanges').addEventListener('click', async () => {
+            const updates = checkpoints.map(cp => {
+                const el = document.getElementById(`checkpoint-${cp.id}`);
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    const mapRect = document.getElementById('map').getBoundingClientRect();
+                    cp.x = rect.left - mapRect.left;
+                    cp.y = rect.top - mapRect.top;
+                }
+                return cp;
+            });
+
+            try {
+                const response = await fetch('/update_checkpoints', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updates)
+                });
+
+                if (response.ok) {
+                    alert('Changes saved successfully!');
+                } else {
+                    console.error('Failed to save changes:', response.statusText);
+                    alert('Failed to save changes. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error saving changes:', error);
+                alert('Error saving changes. Please try again.');
+            }
+        });
+
+        fetchCheckpoints().then(data => {
+            checkpoints = data;
+            renderMap(checkpoints);
+        }).catch(error => {
+            console.error('Error during initial fetch:', error);
+        });
+    });
+</script>
+
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

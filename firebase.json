@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "public": "templates",
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "flaskproject12",
+          "region": "us-central1"
+        }
+      }
+    ]
+  }
+}

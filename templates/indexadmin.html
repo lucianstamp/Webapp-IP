@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista Pacienti</title>
+
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Lista pacienti</h1>
+        <form action="{{ url_for('robotlocation') }}" class="d-inline">
+            <button type="submit" class="btn btn-primary">Modificare harta</button>
+        </form>
+        <form action="{{ url_for('register') }}" class="d-inline">
+            <button type="submit" class="btn btn-primary">Creaza cont medic</button>
+        </form>
+        <form action="{{ url_for('logout') }}" method="post" class="d-inline">
+            <button type="submit" class="btn btn-danger">Logout</button>
+        </form>
+    </div>
+    <div>
+        <form method="GET" action="{{ url_for('searchadmin') }}" class="form-inline mb-4">
+            <input type="text" name="nume" class="form-control mr-2" placeholder="Cauta dupa nume">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+        <form action="{{ url_for('indexadmin') }}" class="form-inline mb-4">
+            <button type="submit" class="btn btn-primary">Reset</button>
+        </form>
+    </div>
+
+
+    <ul class="list-group">
+        {% for pacient in pacienti %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <p><strong>Nume:</strong> {{ pacient.nume }}</p>
+                    <p><strong>Varsta:</strong> {{ pacient.varsta }}</p>
+                    <p><strong>Gen:</strong> {{ pacient.gen }}</p>
+                    <p><strong>Data nasterii:</strong> {{ pacient.datanasterii }}</p>
+                    <p><strong>CNP:</strong> {{ pacient.cnp }}</p>
+                    <p><strong>Adresa:</strong> {{ pacient.adresa }}</p>
+                    <p><strong>Telefon:</strong> {{ pacient.telefon }}</p>
+                    <p><strong>Email:</strong> {{ pacient.email }}</p>
+                    <p><strong>Profesie:</strong> {{ pacient.profesie }}</p>
+                    <p><strong>Loc de munca:</strong> {{ pacient.locdemunca }}</p>
+                    <p><strong>Data internare:</strong> {{ pacient.datainternare }}</p>
+                    <p><strong>Data externare:</strong> {{ pacient.dataexternare }}</p>
+                    <p><strong>Salon:</strong> {{ pacient.salon }}</p>
+                    <p><strong>Pat:</strong> {{ pacient.pat }}</p>
+                </div>
+                <div>
+                    <a href="{{ url_for('updateadmin', id=pacient.id) }}" class="btn btn-info btn-sm mr-2">Edit</a>
+                    <a href="{{ url_for('comandaadmin', id=pacient.id) }}" class="btn btn-info btn-sm mr-2">Comanda</a>
+                    <form action="{{ url_for('deleteadmin', id=pacient.id) }}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
